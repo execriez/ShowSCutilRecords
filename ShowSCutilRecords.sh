@@ -8,15 +8,15 @@
 # ShowSCutilRecords provides two main functions that allow you to read and parse the SCutil values.
 # You should note that at first boot, the SCutil vars take some time to fully populate.
 #
-# GLB_SF_SCUTILSHOWALLRECORDSFLAT - This function will shows every record of every SubKey, flattened to be more easily accessible
-# GLB_SF_SCUTILSHOWALLSUBRECORDSFORRECORDFLAT - Given an existing record, this function will show all associated subrecords
+# SF_SCUTILSHOWALLRECORDSFLAT - This function will shows every record of every SubKey, flattened to be more easily accessible
+# SF_SCUTILSHOWALLSUBRECORDSFORRECORDFLAT - Given an existing record, this function will show all associated subrecords
 #
-# I use diff on the results of the GLB_SF_SCUTILSHOWALLRECORDSFLAT output to see what changes when you connect to different networks.
+# I use diff on the results of the SF_SCUTILSHOWALLRECORDSFLAT output to see what changes when you connect to different networks.
 #
 #
 # Example1 - List all SCutil records and values
 #
-#   GLB_SF_SCUTILSHOWALLRECORDSFLAT
+#   SF_SCUTILSHOWALLRECORDSFLAT
 #
 #   The output will be a very long list something like this:
 #
@@ -43,7 +43,7 @@
 #
 # Example 2 - List all IPv4 settings of network interface  en1
 #
-#   GLB_SF_SCUTILSHOWALLSUBRECORDSFORRECORDFLAT "State,/Network/Interface/en1/IPv4"
+#   SF_SCUTILSHOWALLSUBRECORDSFORRECORDFLAT "State,/Network/Interface/en1/IPv4"
 #
 #   The output will be a list something like this:
 #
@@ -54,7 +54,7 @@
 #
 # Example 3 - Get the IPv4 address of network interface en1
 #
-#   GLB_SF_SCUTILSHOWALLSUBRECORDSFORRECORDFLAT "State,/Network/Interface/en1/IPv4,Addresses,0"
+#   SF_SCUTILSHOWALLSUBRECORDSFORRECORDFLAT "State,/Network/Interface/en1/IPv4,Addresses,0"
 #
 #   The output will be a single line, something like this:
 #
@@ -64,10 +64,10 @@
 # Example 4 - Get DHCP option 15 (domain name)
 #
 #   # Get the Primary network service
-#   sv_IPv4PrimaryService=$(GLB_SF_SCUTILSHOWALLSUBRECORDSFORRECORDFLAT "State,/Network/Global/IPv4,PrimaryService" | cut -d, -f4-)
+#   sv_IPv4PrimaryService=$(SF_SCUTILSHOWALLSUBRECORDSFORRECORDFLAT "State,/Network/Global/IPv4,PrimaryService" | cut -d, -f4-)
 #
 #   # Get DHCP option 15 (domain name)
-#   sv_NetworkServiceDHCPOption15=$(GLB_SF_SCUTILSHOWALLSUBRECORDSFORRECORDFLAT "State,/Network/Service/${sv_IPv4PrimaryService}/DHCP,Option_15" | cut -d, -f4- | sed -E "s/^<data> 0x//;s/00$//" | xxd -r -p)
+#   sv_NetworkServiceDHCPOption15=$(SF_SCUTILSHOWALLSUBRECORDSFORRECORDFLAT "State,/Network/Service/${sv_IPv4PrimaryService}/DHCP,Option_15" | cut -d, -f4- | sed -E "s/^<data> 0x//;s/00$//" | xxd -r -p)
 #   echo ${sv_NetworkServiceDHCPOption15}
 #
 #   This will display the domain name as supplied by DHCP option 15, something like this
@@ -78,10 +78,10 @@
 
 # -- Begin ShowSCutilRecords internal functions --
 
-GLB_SV_SCUTILDATASEPARATOR=","
+SV_SCUTILDATASEPARATOR=","
 
 # Shows all available SCutil SubKeys
-GLB_SF_SCUTILSHOWALLSUBKEYS()
+SF_SCUTILSHOWALLSUBKEYS()
 {
   (SCutil | grep -v "{\|}" | sed -E "s|^[^=]*=[ ]*(.*$)|\1|g") <<- EOF
 open
@@ -91,7 +91,7 @@ EOF
 }
 
 # Shows all records for a subkey, tidied up to be more easily parsable
-GLB_SF_SCUTILSHOWALLRECORDSFORSUBKEYTIDY() #subkey
+SF_SCUTILSHOWALLRECORDSFORSUBKEYTIDY() #subkey
 {
   if test -n "${1}"
   then
@@ -120,7 +120,7 @@ EOF
 }
 
 # Shows all records for a subkey, flattened to be more easily accessible
-GLB_SF_SCUTILSHOWALLRECORDSFORSUBKEYFLAT() #subkey
+SF_SCUTILSHOWALLRECORDSFORSUBKEYFLAT() #subkey
 {
   local sv_LastStruct
   local sv_PreText
@@ -130,20 +130,20 @@ GLB_SF_SCUTILSHOWALLRECORDSFORSUBKEYFLAT() #subkey
   then
     sv_LastStruct=""
     sv_PreText=""
-    GLB_SF_SCUTILSHOWALLRECORDSFORSUBKEYTIDY ${1} | while IFS= read sv_SCutilText
+    SF_SCUTILSHOWALLRECORDSFORSUBKEYTIDY ${1} | while IFS= read sv_SCutilText
     do
       if [ "${sv_SCutilText}" = "{" ]
       then
         if test -n "${sv_PreText}"
         then
-          sv_PreText="${sv_PreText}${GLB_SV_SCUTILDATASEPARATOR}"
+          sv_PreText="${sv_PreText}${SV_SCUTILDATASEPARATOR}"
         fi
         sv_PreText="${sv_PreText}${sv_LastStruct}"
         sv_LastStruct=""
       else
         if [ "${sv_SCutilText}" = "}" ]
         then
-          sv_PreText="$(echo ${sv_PreText} | sed -E 's|(.*)('${GLB_SV_SCUTILDATASEPARATOR}'[^'${GLB_SV_SCUTILDATASEPARATOR}']*$)|\1|')"
+          sv_PreText="$(echo ${sv_PreText} | sed -E 's|(.*)('${SV_SCUTILDATASEPARATOR}'[^'${SV_SCUTILDATASEPARATOR}']*$)|\1|')"
         else
           if ($(echo ${sv_SCutilText} | grep -q "<[^<>]*>$"))
           then
@@ -151,9 +151,9 @@ GLB_SF_SCUTILSHOWALLRECORDSFORSUBKEYFLAT() #subkey
           else
             if test -n "${sv_PreText}"
             then
-              echo -n "${sv_PreText}${GLB_SV_SCUTILDATASEPARATOR}"
+              echo -n "${sv_PreText}${SV_SCUTILDATASEPARATOR}"
             fi
-            echo ${sv_SCutilText} | sed -E 's|^(.*) : (.*)$|\1'${GLB_SV_SCUTILDATASEPARATOR}'\2|'
+            echo ${sv_SCutilText} | sed -E 's|^(.*) : (.*)$|\1'${SV_SCUTILDATASEPARATOR}'\2|'
           fi
 	    fi      
       fi      
@@ -162,7 +162,7 @@ GLB_SF_SCUTILSHOWALLRECORDSFORSUBKEYFLAT() #subkey
 }
 
 # Given a flat record, return the associated SubKey
-GLB_SF_SCUTILFINDSUBKEYFORFLATRECORD() #flatrecord
+SF_SCUTILFINDSUBKEYFORFLATRECORD() #flatrecord
 {
   local sv_SubKey
   local iv_Count
@@ -170,13 +170,13 @@ GLB_SF_SCUTILFINDSUBKEYFORFLATRECORD() #flatrecord
   if test -n "${1}"
   then
     sv_SubKey=""
-    iv_Count=$(echo ${1} | tr "${GLB_SV_SCUTILDATASEPARATOR}" "\n" | wc -l | sed "s|^[ ]*||")
+    iv_Count=$(echo ${1} | tr "${SV_SCUTILDATASEPARATOR}" "\n" | wc -l | sed "s|^[ ]*||")
     while [ ${iv_Count} -gt 0 ]
     do
-      sv_SubKey=$(echo ${1} | cut -d"${GLB_SV_SCUTILDATASEPARATOR}" -f1-${iv_Count})
-      if test -n "$(GLB_SF_SCUTILSHOWALLSUBKEYS | sed -E 's|(^[^:]*):|\1,|' | grep "${sv_SubKey}")"
+      sv_SubKey=$(echo ${1} | cut -d"${SV_SCUTILDATASEPARATOR}" -f1-${iv_Count})
+      if test -n "$(SF_SCUTILSHOWALLSUBKEYS | sed -E 's|(^[^:]*):|\1,|' | grep "${sv_SubKey}")"
       then
-        echo "${sv_SubKey}" | sed -E 's|(^[^'${GLB_SV_SCUTILDATASEPARATOR}']*)'${GLB_SV_SCUTILDATASEPARATOR}'|\1:|'
+        echo "${sv_SubKey}" | sed -E 's|(^[^'${SV_SCUTILDATASEPARATOR}']*)'${SV_SCUTILDATASEPARATOR}'|\1:|'
         break
       fi
       iv_Count=$((${iv_Count}-1))
@@ -190,27 +190,27 @@ GLB_SF_SCUTILFINDSUBKEYFORFLATRECORD() #flatrecord
 # -- Begin ShowSCutilRecords functions --
 
 # Shows every record of every SubKey, flattened to be more easily accessible
-GLB_SF_SCUTILSHOWALLRECORDSFLAT()
+SF_SCUTILSHOWALLRECORDSFLAT()
 {
   local sv_SCutilSubKey
 
-  GLB_SF_SCUTILSHOWALLSUBKEYS | while read sv_SCutilSubKey
+  SF_SCUTILSHOWALLSUBKEYS | while read sv_SCutilSubKey
   do
-    GLB_SF_SCUTILSHOWALLRECORDSFORSUBKEYFLAT ${sv_SCutilSubKey}
+    SF_SCUTILSHOWALLRECORDSFORSUBKEYFLAT ${sv_SCutilSubKey}
   done
 }
 
 # Given an existing flat record, this function will show all associated subrecords
-GLB_SF_SCUTILSHOWALLSUBRECORDSFORRECORDFLAT() #flatrecord
+SF_SCUTILSHOWALLSUBRECORDSFORRECORDFLAT() #flatrecord
 {
   local sv_SubKeyForRecord
   
   if test -n "${1}"
   then
-    sv_SubKeyForRecord="$(GLB_SF_SCUTILFINDSUBKEYFORFLATRECORD ${1})"
+    sv_SubKeyForRecord="$(SF_SCUTILFINDSUBKEYFORFLATRECORD ${1})"
     if test -n "${sv_SubKeyForRecord}"
     then
-      GLB_SF_SCUTILSHOWALLRECORDSFORSUBKEYFLAT "${sv_SubKeyForRecord}" | grep -E "${1}("${GLB_SV_SCUTILDATASEPARATOR}"|$)"
+      SF_SCUTILSHOWALLRECORDSFORSUBKEYFLAT "${sv_SubKeyForRecord}" | grep -E "${1}("${SV_SCUTILDATASEPARATOR}"|$)"
     fi
   fi
 }
@@ -219,7 +219,7 @@ GLB_SF_SCUTILSHOWALLSUBRECORDSFORRECORDFLAT() #flatrecord
 
 # Now we begin for real
 
-GLB_SF_SCUTILSHOWALLRECORDSFLAT
+SF_SCUTILSHOWALLRECORDSFLAT
 
 #exit 0
 
