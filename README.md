@@ -1,4 +1,4 @@
-# RadmindTfix4SIP
+# ShowSCutilRecords
 List SCutil records as a big human readable list
 
 ## Description:
